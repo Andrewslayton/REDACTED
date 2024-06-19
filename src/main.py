@@ -3,11 +3,11 @@ from tkinter import colorchooser, ttk
 from threading import Thread, Event
 
 import cv2
-import pyvirtualcam
-from pyvirtualcam import PixelFormat
 
+from src.camera import VirtualCameraMirror
 from src.lib_install import main as lib_install
 import src._logging  # noqa: F401
+
 
 stop_event = Event()
 filter_var = None
@@ -167,46 +167,35 @@ def apply_laplacian(frame, scale_factor):
     return frame
 
 
+def apply_filter(frame):
+    filter_choice = filter_var.get()
+    bar_color = tuple(map(int, current_color))
+    strength = distortion_strength.get()
+    scale_factor = area_scale.get()
+
+    if filter_choice == "eyeBar":
+        frame = apply_black_bar(frame, bar_color, scale_factor)
+    elif filter_choice == "distortion":
+        frame = apply_pixel_distortion(frame, strength, scale_factor)
+    elif filter_choice == "median":
+        frame = apply_median_blur(frame, strength, scale_factor)
+    elif filter_choice == "box":
+        frame = apply_box_filter(frame, strength, scale_factor)
+    elif filter_choice == "laplacian":
+        frame = apply_laplacian(frame, scale_factor)
+    return frame
+
+
 def start_camera():
-    vc = cv2.VideoCapture(0)
-
-    if not vc.isOpened():
-        raise RuntimeError("Could not open video source")
-
-    pref_width = 1280
-    pref_height = 720
-    pref_fps_in = 30
-    vc.set(cv2.CAP_PROP_FRAME_WIDTH, pref_width)
-    vc.set(cv2.CAP_PROP_FRAME_HEIGHT, pref_height)
-    vc.set(cv2.CAP_PROP_FPS, pref_fps_in)
-
-    width = int(vc.get(cv2.CAP_PROP_FRAME_WIDTH))
-    height = int(vc.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    fps_out = 20
-
-    with pyvirtualcam.Camera(
-        width, height, fps_out, fmt=PixelFormat.BGR, device="Unity Video Capture"
-    ) as cam:
+    width = 1280
+    height = 720
+    fps = 30
+    with VirtualCameraMirror(width, height, fps) as (vc, cam):
         while not stop_event.is_set():
             ret, frame = vc.read()
             if not ret:
                 raise RuntimeError("Error fetching frame")
-
-            filter_choice = filter_var.get()
-            bar_color = tuple(map(int, current_color))
-            strength = distortion_strength.get()
-            scale_factor = area_scale.get()
-
-            if filter_choice == "eyeBar":
-                frame = apply_black_bar(frame, bar_color, scale_factor)
-            elif filter_choice == "distortion":
-                frame = apply_pixel_distortion(frame, strength, scale_factor)
-            elif filter_choice == "median":
-                frame = apply_median_blur(frame, strength, scale_factor)
-            elif filter_choice == "box":
-                frame = apply_box_filter(frame, strength, scale_factor)
-            elif filter_choice == "laplacian":
-                frame = apply_laplacian(frame, scale_factor)
+            frame = apply_filter(frame)
             cam.send(frame)
             cam.sleep_until_next_frame()
 
