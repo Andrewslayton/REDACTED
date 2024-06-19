@@ -208,6 +208,7 @@ def main():
 
     ttk.Label(root, text="Choose a filter to apply:").pack(pady=10)
     filter_var = tk.StringVar(value="eyeBar")
+    current_color = (0, 0, 0)
 
     ttk.Radiobutton(root, text="Eye Level Bar", variable=filter_var, value="eyeBar").pack(anchor=tk.W)
     ttk.Radiobutton(root, text="Pixel Distortion", variable=filter_var, value="distortion").pack(anchor=tk.W)
