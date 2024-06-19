@@ -24,7 +24,7 @@ current_color = None
 distortion_strength = None
 area_scale = None
 
-def apply_black_bar(frame, color, scale_factor): 
+def apply_black_bar(frame, color, scale_factor):
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     faces = detector(gray, 0)
     if len(faces) == 0:
@@ -47,7 +47,7 @@ def apply_black_bar(frame, color, scale_factor):
         box = cv2.boxPoints(((center[0], center[1]), (size[0], size[1]), angle))
         box = np.intp(box)
         cv2.drawContours(frame, [box], 0, color, -1)
-        
+
     return frame
 def apply_pixel_distortion(frame, strength, scale_factor):
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
