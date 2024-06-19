@@ -18,6 +18,7 @@ else:
 detector = dlib.get_frontal_face_detector()
 predictor = dlib.shape_predictor(dat_file)
 
+
 stop_event = Event()
 filter_var = None
 current_color = None
@@ -148,6 +149,25 @@ def apply_filter(frame):
     if len(frame.shape) == 2 or frame.shape[2] == 1:
         frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
 
+    return frame
+
+
+def apply_filter(frame):
+    filter_choice = filter_var.get()
+    bar_color = tuple(map(int, current_color))
+    strength = distortion_strength.get()
+    scale_factor = area_scale.get()
+
+    if filter_choice == "eyeBar":
+        frame = apply_black_bar(frame, bar_color, scale_factor)
+    elif filter_choice == "distortion":
+        frame = apply_pixel_distortion(frame, strength, scale_factor)
+    elif filter_choice == "median":
+        frame = apply_median_blur(frame, strength, scale_factor)
+    elif filter_choice == "box":
+        frame = apply_box_filter(frame, strength, scale_factor)
+    elif filter_choice == "laplacian":
+        frame = apply_laplacian(frame, scale_factor)
     return frame
 
 
