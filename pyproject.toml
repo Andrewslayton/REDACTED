@@ -30,6 +30,38 @@ isort = "^5.13.0"
 prospector = "^1.10.3"
 
 
+[tool.poetry.group.build]
+optional = true
+
+
+[tool.poetry.group.build.dependencies]
+cx-freeze = "^7.1.1"
+
+
+[[tool.cxfreeze.executables]]
+script = "src/main.py"
+base = "gui"
+uac_admin = true
+shortcut_dir = "DesktopFolder"
+shortcut_name = "Redacted Video"
+
+
+[tool.cxfreeze.build_exe]
+excludes = ["unittest", "test", "setuptools"]
+include_msvcr = true
+
+
+[tool.cxfreeze.bdist_msi]
+target_name = "Redacted Video"
+initial_target_dir = "[ProgramFilesFolder]\\Redacted Video"
+upgrade_code = "{494bebef-dead-beef-98c8-d0b2e339750e}"
+
+
+[[tool.cxfreeze.bdist_msi.summary_data]]
+author = "Andrew Slayton & Martin Miglio"
+comments = "Automated Video Redaction"
+
+
 [tool.black]
 line-length = 88
 target-version = ['py310']
