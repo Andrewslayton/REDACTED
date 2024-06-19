@@ -13,6 +13,7 @@ import requests
 
 from src.consts import APP_DATA
 from src.camera import CAMERA_NAME
+import src._logging  # noqa
 
 LIBRARY_NAMES = ["UnityCaptureFilter32.dll", "UnityCaptureFilter64.dll"]
 CACHE_DIR = os.path.join(APP_DATA, ".cache")
@@ -113,11 +114,12 @@ def install_packages():
     logging.info("\tRegistering UnityCapture libs...")
     LIB_DIR = os.path.join(PACKAGE_DIR, "UnityCapture-master", "Install")
     for lib in LIBRARY_NAMES:
+        subprocess.run(["regsvr32", "/u", os.path.join(LIB_DIR, lib), "/s"])
         subprocess.run(
             [
                 "regsvr32",
                 os.path.join(LIB_DIR, lib),
-                f"/i:UnityCaptureName='{CAMERA_NAME}'",
+                f"/i:UnityCaptureName={CAMERA_NAME}",
                 "/s",
             ]
         )
