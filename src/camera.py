@@ -4,7 +4,7 @@ from pyvirtualcam import PixelFormat, Camera
 from src.consts import APP_NAME
 
 DEFAULT_CAMERA_NAME = "Unity Video Capture"
-CAMERA_NAME = f"{APP_NAME} Video Capture".replace(" ", "_")
+CAMERA_NAME = f"{APP_NAME} Camera"
 
 camera_names = [CAMERA_NAME, DEFAULT_CAMERA_NAME]
 
@@ -44,6 +44,7 @@ class VirtualCameraMirror:
             try:
                 logging.info(f"Trying to open camera with name {name}")
                 self.vcam = Camera(width, height, fps, fmt=self.fmt, device=name)
+                logging.info(f"Opened camera with name {name}")
                 break
             except RuntimeError as e:
                 camera_exception = e
