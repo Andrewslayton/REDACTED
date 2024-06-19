@@ -8,8 +8,12 @@ import pyvirtualcam
 from pyvirtualcam import PixelFormat
 
 from src.post_install import main as post_install
-
-
+ 
+stop_event = Event()
+filter_var = None
+current_color = None
+distortion_strength = None
+area_scale = None
 def apply_black_bar(frame, color, scale_factor):
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
@@ -203,11 +207,14 @@ def update_color():
     current_color = tuple(map(int, bar_color)) if bar_color else (0, 0, 0)
 
 def main():
+    global stop_event
     root = tk.Tk()
     root.title("Select Filter")
 
     ttk.Label(root, text="Choose a filter to apply:").pack(pady=10)
+    global filter_var
     filter_var = tk.StringVar(value="eyeBar")
+    global current_color
     current_color = (0, 0, 0)
 
     ttk.Radiobutton(root, text="Eye Level Bar", variable=filter_var, value="eyeBar").pack(anchor=tk.W)
@@ -218,11 +225,13 @@ def main():
     ttk.Radiobutton(root, text="None", variable=filter_var, value="none").pack(anchor=tk.W)
 
     ttk.Label(root, text="Filter Scale: (Size)").pack(pady=10)
+    global area_scale
     area_scale = tk.Scale(root, from_=1, to=3, orient=tk.HORIZONTAL, resolution=0.1)
     area_scale.set(1)
     area_scale.pack(pady=10)
 
     ttk.Label(root, text="Distortion Strength:").pack(pady=10)
+    global distortion_strength
     distortion_strength = tk.Scale(root, from_=1, to=99, orient=tk.HORIZONTAL,)
     distortion_strength.set(99)
     distortion_strength.pack(pady=10)
