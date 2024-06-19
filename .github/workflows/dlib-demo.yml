@@ -1,0 +1,84 @@
+name: Build windows package
+
+on:
+  push:
+    branches:
+      - "dlib-demo"
+
+permissions:
+  contents: write
+
+jobs:
+  poetry-install:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@master
+      - name: Install Poetry
+        run: |
+          pipx install "poetry>=1.7.0"
+      - name: Set up Python
+        id: pysetup
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.12"
+          cache: "poetry"
+      - name: Install package and dependencies
+        run: |
+          cd src
+          poetry env use '${{ steps.pysetup.outputs.python-path }}'
+          poetry install --with build --without dev
+      - name: Build package
+        run: |
+          poetry add dlib
+          poetry run python -c "import dlib; print(dlib.__version__)"
+
+  build-from-source:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@master
+      - name: Install Poetry
+        run: |
+          pipx install "poetry>=1.7.0"
+      - name: Set up Python
+        id: pysetup
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.12"
+          cache: "poetry"
+      - name: Install conda env
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          auto-update-conda: true
+          python-version: "3.12"
+      - name: Install dlib dependencies
+        run: |
+          conda create -n dlib python=3.12 cmake
+          conda activate dlib
+          conda install cuda cudnn -c nvidia
+          gcm nvcc
+      - name: Install dlib
+        run: |
+          git clone https://github.com/davisking/dlib.git
+          cd dlib
+          mkdir build
+          cd build
+          # dcudatoolkit root is miniconda env bin path"
+          cmake .. -DDLIB_USE_CUDA=1 -DUSE_AVX_INSTRUCTIONS=1 -DCUDAToolkit_ROOT=~/miniconda3/envs/dlib
+          cmake --build .
+
+      - name: upload build artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: dlib
+          path: dlib/build
+
+      - name: Install package and dependencies
+        run: |
+          cd src
+          poetry env use '${{ steps.pysetup.outputs.python-path }}'
+          poetry install --with build --without dev
+
+      - name: Build package
+        run: |
+          poetry add ./dlib/build/dist/*.whl
+          poetry run python -c "import dlib; print(dlib.__version__)"
