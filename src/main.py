@@ -7,8 +7,7 @@ import cv2
 import pyvirtualcam
 from pyvirtualcam import PixelFormat
 
-from src.post_install import main as post_install
- 
+from src.lib_install import main as lib_install
 stop_event = Event()
 filter_var = None
 current_color = None
@@ -243,6 +242,7 @@ def main():
     stop_event = Event()
     root.mainloop()
 
+
 if __name__ == "__main__":
-    post_install()
+    lib_install()
     main()
