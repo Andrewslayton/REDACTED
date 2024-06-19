@@ -23,7 +23,6 @@ filter_var = None
 current_color = None
 distortion_strength = None
 area_scale = None
-
 def apply_black_bar(frame, color, scale_factor):
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     faces = detector(gray, 0)
@@ -178,7 +177,9 @@ def main():
     root.title("Select Filter")
 
     ttk.Label(root, text="Choose a filter to apply:").pack(pady=10)
+    global filter_var
     filter_var = tk.StringVar(value="eyeBar")
+    global current_color
     current_color = (0, 0, 0)
 
     ttk.Radiobutton(root, text="Eye Level Bar", variable=filter_var, value="eyeBar").pack(anchor=tk.W)
@@ -189,6 +190,7 @@ def main():
     ttk.Radiobutton(root, text="None", variable=filter_var, value="none").pack(anchor=tk.W)
 
     ttk.Label(root, text="Filter Scale: (Size)").pack(pady=10)
+    global area_scale
     area_scale = tk.Scale(root, from_=1, to=3, orient=tk.HORIZONTAL, resolution=0.1)
     area_scale.set(1)
     area_scale.pack(pady=10)
