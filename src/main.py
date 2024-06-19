@@ -6,7 +6,7 @@ import cv2
 import pyvirtualcam
 from pyvirtualcam import PixelFormat
 
-from src.post_install import main as post_install
+from src.lib_install import main as lib_install
 import src._logging  # noqa: F401
 
 stop_event = Event()
@@ -284,5 +284,5 @@ def main():
 
 
 if __name__ == "__main__":
-    post_install()
+    lib_install()
     main()
