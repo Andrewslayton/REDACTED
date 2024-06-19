@@ -5,7 +5,7 @@ from threading import Thread, Event
 import cv2
 
 from src.camera import VirtualCameraMirror
-from src.post_install import main as post_install
+from src.lib_install import main as lib_install
 import src._logging  # noqa: F401
 
 
@@ -273,5 +273,5 @@ def main():
 
 
 if __name__ == "__main__":
-    post_install()
+    lib_install()
     main()
