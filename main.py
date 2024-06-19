@@ -43,10 +43,9 @@ def start_camera():
 
     width = int(vc.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(vc.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    fps_in = vc.get(cv2.CAP_PROP_FPS)
     fps_out = 20
 
-    with pyvirtualcam.Camera(width, height, fps_out, fmt=PixelFormat.BGR) as cam:
+    with pyvirtualcam.Camera(width, height, fps_out, fmt=PixelFormat.BGR, device = "Unity Video Capture") as cam:
         while True:
             ret, frame = vc.read()
             if not ret:
@@ -55,7 +54,7 @@ def start_camera():
             filter_choice = filter_var.get()
             bar_color = tuple(map(int, current_color))
 
-            if filter_choice == "blackbar":
+            if filter_choice == "eyeBar":
                 frame = apply_black_bar(frame, bar_color)
             elif filter_choice == "distortion":
                 frame = apply_pixel_distortion(frame)
@@ -71,10 +70,10 @@ root = tk.Tk()
 root.title("Select Filter")
 
 ttk.Label(root, text="Choose a filter to apply:").pack(pady=10)
-filter_var = tk.StringVar(value="blackbar")
+filter_var = tk.StringVar(value="eyeBar")
 current_color = (0, 0, 0)
 
-ttk.Radiobutton(root, text="Black Bar", variable=filter_var, value="blackbar").pack(anchor=tk.W)
+ttk.Radiobutton(root, text="Eye Level Bar", variable=filter_var, value="eyeBar").pack(anchor=tk.W)
 ttk.Radiobutton(root, text="Pixel Distortion", variable=filter_var, value="distortion").pack(anchor=tk.W)
 ttk.Radiobutton(root, text="None", variable=filter_var, value="none").pack(anchor=tk.W)
 ttk.Button(root, text="Change Bar Color", command=update_color).pack(pady=10)
