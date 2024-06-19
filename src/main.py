@@ -23,6 +23,8 @@ filter_var = None
 current_color = None
 distortion_strength = None
 area_scale = None
+
+
 def apply_black_bar(frame, color, scale_factor):
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     faces = detector(gray, 0)
@@ -148,6 +150,7 @@ def apply_filter(frame):
 
     return frame
 
+
 def start_camera():
     vc = cv2.VideoCapture(0)
     if not vc.isOpened():
@@ -162,7 +165,9 @@ def start_camera():
     height = int(vc.get(cv2.CAP_PROP_FRAME_HEIGHT))
     fps_out = 20
 
-    with pyvirtualcam.Camera(width, height, fps_out, fmt=PixelFormat.BGR, device="Unity Video Capture") as cam:
+    with pyvirtualcam.Camera(
+        width, height, fps_out, fmt=PixelFormat.BGR, device="Unity Video Capture"
+    ) as cam:
         while not stop_event.is_set():
             ret, frame = vc.read()
             if not ret:
@@ -182,12 +187,24 @@ def main():
     global current_color
     current_color = (0, 0, 0)
 
-    ttk.Radiobutton(root, text="Eye Level Bar", variable=filter_var, value="eyeBar").pack(anchor=tk.W)
-    ttk.Radiobutton(root, text="Pixel Distortion", variable=filter_var, value="distortion").pack(anchor=tk.W)
-    ttk.Radiobutton(root, text="Median Blur", variable=filter_var, value="median").pack(anchor=tk.W)
-    ttk.Radiobutton(root, text="Box Filter", variable=filter_var, value="box").pack(anchor=tk.W)
-    ttk.Radiobutton(root, text="Laplacian Edge Detection", variable=filter_var, value="laplacian").pack(anchor=tk.W)
-    ttk.Radiobutton(root, text="None", variable=filter_var, value="none").pack(anchor=tk.W)
+    ttk.Radiobutton(
+        root, text="Eye Level Bar", variable=filter_var, value="eyeBar"
+    ).pack(anchor=tk.W)
+    ttk.Radiobutton(
+        root, text="Pixel Distortion", variable=filter_var, value="distortion"
+    ).pack(anchor=tk.W)
+    ttk.Radiobutton(root, text="Median Blur", variable=filter_var, value="median").pack(
+        anchor=tk.W
+    )
+    ttk.Radiobutton(root, text="Box Filter", variable=filter_var, value="box").pack(
+        anchor=tk.W
+    )
+    ttk.Radiobutton(
+        root, text="Laplacian Edge Detection", variable=filter_var, value="laplacian"
+    ).pack(anchor=tk.W)
+    ttk.Radiobutton(root, text="None", variable=filter_var, value="none").pack(
+        anchor=tk.W
+    )
 
     ttk.Label(root, text="Filter Scale: (Size)").pack(pady=10)
     global area_scale
