@@ -10,8 +10,10 @@ import pyvirtualcam
 import matplotlib.pyplot as plt
 from pyvirtualcam import PixelFormat
 
-if getattr(sys, 'frozen', False):
-    dat_file = os.path.join(sys._MEIPASS, 'shape_predictor_68_face_landmarks.dat')
+from src.camera import CAMERA_NAME
+from src.lib_install import main as lib_install
+
+if getattr(sys, "frozen", False):
 else:
     dat_file = 'shape_predictor_68_face_landmarks.dat'
 
@@ -186,7 +188,7 @@ def start_camera():
     fps_out = 20
 
     with pyvirtualcam.Camera(
-        width, height, fps_out, fmt=PixelFormat.BGR, device="Unity Video Capture"
+        width, height, fps_out, fmt=PixelFormat.BGR, device=CAMERA_NAME
     ) as cam:
         while not stop_event.is_set():
             ret, frame = vc.read()
@@ -257,5 +259,7 @@ def start_camera_thread():
 def stop_camera():
     stop_event.set()
 
+
 if __name__ == "__main__":
+    lib_install()
     main()
