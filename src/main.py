@@ -36,7 +36,6 @@ def apply_black_bar(frame, color, scale_factor):
         x2=shape.part(45).x
         y2=shape.part(45).y
 
-        # Calculate rotation angle
         left_eye = (shape.part(36).x, shape.part(36).y)
         right_eye = (shape.part(45).x, shape.part(45).y)
         angle = np.arctan2(right_eye[1] - left_eye[1], right_eye[0] - left_eye[0]) * 180 / np.pi
@@ -128,6 +127,47 @@ def apply_laplacian(frame, scale_factor):
 
     return frame
 
+
+
+
+def apply_morphological_transform(frame):
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    faces = detector(gray)
+    if len(faces) == 0:
+        frame = cv2.GaussianBlur(frame, (99, 99), 30)
+    for face in faces:
+        x, y, w, h = face.left(), face.top(), face.width(), face.height()
+        x1 = int(x)
+        y1 = int(y)
+        x2 = int(x + w)
+        y2 = int(y + h)
+
+        face_region = frame[y1:y2, x1:x2]
+        kernel = np.ones((5, 5), np.uint8)
+        transformed = cv2.morphologyEx(face_region, cv2.MORPH_GRADIENT, kernel)
+        frame[y1:y2, x1:x2] = transformed
+
+    return frame
+
+
+
+def apply_blend_face(frame):
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    faces = detector(gray)
+    if len(faces) == 0:
+        return frame  # Return original frame if no face is detected
+
+    mask = np.zeros_like(gray)
+    for face in faces:
+        x, y, w, h = face.left(), face.top(), face.width(), face.height()
+        # Create a white rectangle on the mask for the detected face
+        cv2.rectangle(mask, (x, y), (x+w, y+h), 255, -1)
+
+    # Inpaint the frame using the mask
+    frame = cv2.inpaint(frame, mask, inpaintRadius=3, flags=cv2.INPAINT_TELEA)
+
+    return frame
+
 def apply_filter(frame):
     filter_choice = filter_var.get()
     bar_color = tuple(map(int, current_color))
@@ -143,6 +183,14 @@ def apply_filter(frame):
         frame = apply_box_filter(frame, strength, scale_factor)
     elif filter_choice == "laplacian":
         frame = apply_laplacian(frame, scale_factor)
+    elif filter_choice == "morph":
+        frame = apply_morphological_transform(frame)
+    
+    elif filter_choice == "No head?":
+        frame = apply_blend_face(frame)
+    elif filter_choice == "none":
+        pass
+    
 
     if len(frame.shape) == 2 or frame.shape[2] == 1:
         frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
@@ -186,6 +234,10 @@ def main():
     ttk.Radiobutton(root, text="Median Blur", variable=filter_var, value="median").pack(anchor=tk.W)
     ttk.Radiobutton(root, text="Box Filter", variable=filter_var, value="box").pack(anchor=tk.W)
     ttk.Radiobutton(root, text="Laplacian Edge Detection", variable=filter_var, value="laplacian").pack(anchor=tk.W)
+    ttk.Radiobutton(root, text="Cartoon Filter", variable=filter_var, value="cartoon").pack(anchor=tk.W)
+    ttk.Radiobutton(root, text="Morphological Transform", variable=filter_var, value="morph").pack(anchor=tk.W)
+    ttk.Radiobutton(root, text="Sharingan Eyes", variable=filter_var, value="sharingon").pack(anchor=tk.W)
+    ttk.Radiobutton(root, text="No head?", variable=filter_var, value="No head?").pack(anchor=tk.W)
     ttk.Radiobutton(root, text="None", variable=filter_var, value="none").pack(anchor=tk.W)
 
     ttk.Label(root, text="Filter Scale: (Size)").pack(pady=10)
