@@ -10,7 +10,6 @@ import pyvirtualcam
 import matplotlib.pyplot as plt
 from pyvirtualcam import PixelFormat
 
-
 if getattr(sys, 'frozen', False):
     dat_file = os.path.join(sys._MEIPASS, 'shape_predictor_68_face_landmarks.dat')
 else:
@@ -25,34 +24,130 @@ current_color = None
 distortion_strength = None
 area_scale = None
 
-def apply_black_bar(frame, color, scale_factor):
-    if frame.dtype != np.uint8:
-        frame = frame.astype(np.uint8)
-    if len(frame.shape) == 3 and frame.shape[2] == 3:  
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    elif len(frame.shape) == 2:  
-        gray = frame
-    else:
-        raise ValueError("Unsupported frame format")
-    
-    print(f"Frame type: {frame.dtype}, shape: {frame.shape}")
-    print(f"Gray type: {gray.dtype}, shape: {gray.shape}")
-
+def apply_black_bar(frame, color, scale_factor): 
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     faces = detector(gray, 0)
-    plt.imshow(gray, cmap='gray')
-
+    if len(faces) == 0:
+        frame = cv2.GaussianBlur(frame, (99, 99), 30)
     for face in faces:
         shape = predictor(gray, face)
+        x1=shape.part(36).x
+        y1=shape.part(36).y
+        x2=shape.part(45).x
+        y2=shape.part(45).y
+
+        # Calculate rotation angle
+        left_eye = (shape.part(36).x, shape.part(36).y)
+        right_eye = (shape.part(45).x, shape.part(45).y)
+        angle = np.arctan2(right_eye[1] - left_eye[1], right_eye[0] - left_eye[0]) * 180 / np.pi
+        center = ((x1 + x2) / 2, (y1 + y2) / 2)
+        width = abs(x2 - x1) * scale_factor
+        height = 50 * scale_factor
+        size = (width, height)
+        box = cv2.boxPoints(((center[0], center[1]), (size[0], size[1]), angle))
+        box = np.intp(box)
+        cv2.drawContours(frame, [box], 0, color, -1)
+        
+    return frame
+def apply_pixel_distortion(frame, strength, scale_factor):
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    faces = detector(gray)
+    strength = max(1, strength)
+    if strength % 2 == 0:
+        strength += 1
+    if len(faces) == 0:
+        frame = cv2.GaussianBlur(frame, (99, 99), 30)
+    for face in faces:
         x, y, w, h = face.left(), face.top(), face.width(), face.height()
         x1 = int(x - w * (scale_factor - 1) / 2)
         y1 = int(y - h * (scale_factor - 1) / 2)
         x2 = int(x + w * (1 + (scale_factor - 1) / 2))
         y2 = int(y + h * (1 + (scale_factor - 1) / 2))
 
-        cv2.rectangle(frame, (x1, y1 + (y2 - y1) // 3), (x2, y1 + 2 * (y2 - y1) // 3), color, -1)
+        face_region = frame[y1:y2, x1:x2]
+        distorted_region = cv2.GaussianBlur(face_region, (strength, strength), 30)
+        frame[y1:y2, x1:x2] = distorted_region
 
     return frame
 
+def apply_median_blur(frame, strength, scale_factor):
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    faces = detector(gray)
+    ksize = max(1, strength)
+    if ksize % 2 == 0:
+        ksize += 1
+    if len(faces) == 0:
+        frame = cv2.GaussianBlur(frame, (99, 99), 30)
+    for face in faces:
+        x, y, w, h = face.left(), face.top(), face.width(), face.height()
+        x1 = int(x - w * (scale_factor - 1) / 2)
+        y1 = int(y - h * (scale_factor - 1) / 2)
+        x2 = int(x + w * (1 + (scale_factor - 1) / 2))
+        y2 = int(y + h * (1 + (scale_factor - 1) / 2))
+
+        face_region = frame[y1:y2, x1:x2]
+        blurred_region = cv2.medianBlur(face_region, ksize)
+        frame[y1:y2, x1:x2] = blurred_region
+
+    return frame
+
+def apply_box_filter(frame, strength, scale_factor):
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    faces = detector(gray)
+    ksize = (strength, strength)
+    if len(faces) == 0:
+        frame = cv2.GaussianBlur(frame, (99, 99), 30)
+    for face in faces:
+        x, y, w, h = face.left(), face.top(), face.width(), face.height()
+        x1 = int(x - w * (scale_factor - 1) / 2)
+        y1 = int(y - h * (scale_factor - 1) / 2)
+        x2 = int(x + w * (1 + (scale_factor - 1) / 2))
+        y2 = int(y + h * (1 + (scale_factor - 1) / 2))
+
+        face_region = frame[y1:y2, x1:x2]
+        filtered_region = cv2.boxFilter(face_region, -1, ksize)
+        frame[y1:y2, x1:x2] = filtered_region
+
+    return frame
+
+def apply_laplacian(frame, scale_factor):
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    faces = detector(gray)
+    if len(faces) == 0:
+        frame = cv2.GaussianBlur(frame, (99, 99), 30)
+    for face in faces:
+        x, y, w, h = face.left(), face.top(), face.width(), face.height()
+        x1 = int(x - w * (scale_factor - 1) / 2)
+        y1 = int(y - h * (scale_factor - 1) / 2)
+        x2 = int(x + w * (1 + (scale_factor - 1) / 2))
+        y2 = int(y + h * (1 + (scale_factor - 1) / 2))
+
+        face_region = frame[y1:y2, x1:x2]
+        laplacian_region = cv2.Laplacian(face_region, cv2.CV_64F)
+        frame[y1:y2, x1:x2] = cv2.convertScaleAbs(laplacian_region)
+
+    return frame
+
+def apply_filter(frame):
+    filter_choice = filter_var.get()
+    bar_color = tuple(map(int, current_color))
+    strength = distortion_strength.get()
+    scale_factor = area_scale.get()
+    if filter_choice == "eyeBar":
+        frame = apply_black_bar(frame, bar_color, scale_factor)
+    elif filter_choice == "distortion":
+        frame = apply_pixel_distortion(frame, strength, scale_factor)
+    elif filter_choice == "median":
+        frame = apply_median_blur(frame, strength, scale_factor)
+    elif filter_choice == "box":
+        frame = apply_box_filter(frame, strength, scale_factor)
+    elif filter_choice == "laplacian":
+        frame = apply_laplacian(frame, scale_factor)
+
+    if len(frame.shape) == 2 or frame.shape[2] == 1:
+        frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
+
+    return frame
 
 def start_camera():
     vc = cv2.VideoCapture(0)
@@ -73,27 +168,9 @@ def start_camera():
             ret, frame = vc.read()
             if not ret:
                 raise RuntimeError('Error fetching frame')
-            print(f"Original frame type: {frame.dtype}, shape: {frame.shape}")
             frame = apply_filter(frame)
             cam.send(frame)
             cam.sleep_until_next_frame()
-
-def apply_filter(frame):
-    filter_choice = filter_var.get()
-    bar_color = tuple(map(int, current_color))
-    strength = distortion_strength.get()
-    scale_factor = area_scale.get()
-    if filter_choice == "eyeBar":
-        frame = apply_black_bar(frame, bar_color, scale_factor)
-    elif filter_choice == "distortion":
-        frame = apply_pixel_distortion(frame, strength, scale_factor)
-    elif filter_choice == "median":
-        frame = apply_median_blur(frame, strength, scale_factor)
-    elif filter_choice == "box":
-        frame = apply_box_filter(frame, strength, scale_factor)
-    elif filter_choice == "laplacian":
-        frame = apply_laplacian(frame, scale_factor)
-    return frame
 
 def main():
     global filter_var, current_color, distortion_strength, area_scale
@@ -143,78 +220,3 @@ def stop_camera():
 
 if __name__ == "__main__":
     main()
-
-def apply_pixel_distortion(frame, strength, scale_factor):
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    faces = detector(gray)
-    strength = max(1, strength)
-    if strength % 2 == 0:
-        strength += 1
-
-    for face in faces:
-        x, y, w, h = face.left(), face.top(), face.width(), face.height()
-        x1 = int(x - w * (scale_factor - 1) / 2)
-        y1 = int(y - h * (scale_factor - 1) / 2)
-        x2 = int(x + w * (1 + (scale_factor - 1) / 2))
-        y2 = int(y + h * (1 + (scale_factor - 1) / 2))
-
-        face_region = frame[y1:y2, x1:x2]
-        distorted_region = cv2.GaussianBlur(face_region, (strength, strength), 30)
-        frame[y1:y2, x1:x2] = distorted_region
-
-    return frame
-
-def apply_median_blur(frame, strength, scale_factor):
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    faces = detector(gray)
-    ksize = max(1, strength)
-    if ksize % 2 == 0:
-        ksize += 1
-
-    for face in faces:
-        x, y, w, h = face.left(), face.top(), face.width(), face.height()
-        x1 = int(x - w * (scale_factor - 1) / 2)
-        y1 = int(y - h * (scale_factor - 1) / 2)
-        x2 = int(x + w * (1 + (scale_factor - 1) / 2))
-        y2 = int(y + h * (1 + (scale_factor - 1) / 2))
-
-        face_region = frame[y1:y2, x1:x2]
-        blurred_region = cv2.medianBlur(face_region, ksize)
-        frame[y1:y2, x1:x2] = blurred_region
-
-    return frame
-
-def apply_box_filter(frame, strength, scale_factor):
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    faces = detector(gray)
-    ksize = (strength, strength)
-
-    for face in faces:
-        x, y, w, h = face.left(), face.top(), face.width(), face.height()
-        x1 = int(x - w * (scale_factor - 1) / 2)
-        y1 = int(y - h * (scale_factor - 1) / 2)
-        x2 = int(x + w * (1 + (scale_factor - 1) / 2))
-        y2 = int(y + h * (1 + (scale_factor - 1) / 2))
-
-        face_region = frame[y1:y2, x1:x2]
-        filtered_region = cv2.boxFilter(face_region, -1, ksize)
-        frame[y1:y2, x1:x2] = filtered_region
-
-    return frame
-
-def apply_laplacian(frame, scale_factor):
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    faces = detector(gray)
-
-    for face in faces:
-        x, y, w, h = face.left(), face.top(), face.width(), face.height()
-        x1 = int(x - w * (scale_factor - 1) / 2)
-        y1 = int(y - h * (scale_factor - 1) / 2)
-        x2 = int(x + w * (1 + (scale_factor - 1) / 2))
-        y2 = int(y + h * (1 + (scale_factor - 1) / 2))
-
-        face_region = frame[y1:y2, x1:x2]
-        laplacian_region = cv2.Laplacian(face_region, cv2.CV_64F)
-        frame[y1:y2, x1:x2] = cv2.convertScaleAbs(laplacian_region)
-
-    return frame
