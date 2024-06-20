@@ -4,6 +4,7 @@ import cv2
 import dlib
 import numpy as np
 import tkinter as tk
+import matplotlib.pyplot as plt
 from tkinter import ttk, colorchooser
 from threading import Thread, Event
 import pyvirtualcam
@@ -25,27 +26,17 @@ distortion_strength = None
 area_scale = None
 
 def apply_black_bar(frame, color, scale_factor):
-    # Ensure the frame is an 8-bit image
     if frame.dtype != np.uint8:
         frame = frame.astype(np.uint8)
-
-    # Convert to grayscale if not already
-    if len(frame.shape) == 3 and frame.shape[2] == 3:  # Color image in BGR format
+    if len(frame.shape) == 3 and frame.shape[2] == 3:  
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    elif len(frame.shape) == 2:  # Already grayscale
+    elif len(frame.shape) == 2:  
         gray = frame
     else:
         raise ValueError("Unsupported frame format")
 
-    # Ensure the image is a C-contiguous array
-    if not gray.flags['C_CONTIGUOUS']:
-        gray = np.ascontiguousarray(gray)
-
-    try:
-        faces = detector(gray)
-    except RuntimeError as e:
-        print(f"Error during face detection: {e}")
-        return frame
+    faces = detector(gray, 0)
+    plt.imshow(gray, cmap='gray')
 
     for face in faces:
         shape = predictor(gray, face)
