@@ -1,15 +1,24 @@
 import os
 import sys
-import tkinter as tk
-from tkinter import colorchooser, ttk
-from threading import Thread, Event
 import cv2
 import dlib
 import numpy as np
+import tkinter as tk
+from tkinter import ttk, colorchooser
+from threading import Thread, Event
+import pyvirtualcam
+from pyvirtualcam import PixelFormat
 from src.camera import VirtualCameraMirror
 from src.lib_install import main as lib_install
 import src._logging  # noqa: F401
 
+if getattr(sys, 'frozen', False):
+    dat_file = os.path.join(sys._MEIPASS, 'shape_predictor_68_face_landmarks.dat')
+else:
+    dat_file = 'shape_predictor_68_face_landmarks.dat'
+
+detector = dlib.get_frontal_face_detector()
+predictor = dlib.shape_predictor(dat_file)
 
 stop_event = Event()
 filter_var = None
@@ -17,12 +26,20 @@ current_color = None
 distortion_strength = None
 area_scale = None
 
-detector = dlib.get_frontal_face_detector()
-predictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
-
 def apply_black_bar(frame, color, scale_factor):
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    
+    if frame.dtype != np.uint8:
+        frame = frame.astype(np.uint8)
+
+    if len(frame.shape) == 3 and frame.shape[2] == 3:  
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    elif len(frame.shape) == 2:  
+        gray = frame
+    else:
+        raise ValueError("Unsupported frame format")
+
+    if not gray.flags['C_CONTIGUOUS']:
+        gray = np.ascontiguousarray(gray)
+
     try:
         faces = detector(gray)
     except RuntimeError as e:
@@ -30,19 +47,33 @@ def apply_black_bar(frame, color, scale_factor):
         return frame
 
     for face in faces:
-        try:
-            shape = predictor(gray, face)
-            eye_indices = list(range(36, 48))
-            eye_points = [shape.part(n) for n in eye_indices]
-            if not eye_points:
-                print("No eye landmarks detected for a face.")
-        except Exception as e:
-            print(f"Error during eye landmarks detection: {e}")
-            continue
+        shape = predictor(gray, face)
+        x, y, w, h = face.left(), face.top(), face.width(), face.height()
+        x1 = int(x - w * (scale_factor - 1) / 2)
+        y1 = int(y - h * (scale_factor - 1) / 2)
+        x2 = int(x + w * (1 + (scale_factor - 1) / 2))
+        y2 = int(y + h * (1 + (scale_factor - 1) / 2))
 
-    print("Black bar applied successfully.")
+        cv2.rectangle(frame, (x1, y1 + (y2 - y1) // 3), (x2, y1 + 2 * (y2 - y1) // 3), color, -1)
+
     return frame
 
+def start_camera():
+    width = 1280
+    height = 720
+    fps = 30
+    with VirtualCameraMirror(width, height, fps) as (vc, cam):
+        while not stop_event.is_set():
+            ret, frame = vc.read()
+            if not ret:
+                raise RuntimeError("Error fetching frame")
+            
+            print(f"Original frame type: {frame.dtype}, shape: {frame.shape}")
+            
+            frame = apply_filter(frame)
+            
+            cam.send(frame)
+            cam.sleep_until_next_frame()
 
 def apply_filter(frame):
     filter_choice = filter_var.get()
@@ -60,19 +91,6 @@ def apply_filter(frame):
     elif filter_choice == "laplacian":
         frame = apply_laplacian(frame, scale_factor)
     return frame
-
-def start_camera():
-    width = 1280
-    height = 720
-    fps = 30
-    with VirtualCameraMirror(width, height, fps) as (vc, cam):
-        while not stop_event.is_set():
-            ret, frame = vc.read()
-            if not ret:
-                raise RuntimeError("Error fetching frame")
-            frame = apply_filter(frame)
-            cam.send(frame)
-            cam.sleep_until_next_frame()
 
 def main():
     global filter_var, current_color, distortion_strength, area_scale
@@ -123,7 +141,6 @@ def stop_camera():
 if __name__ == "__main__":
     lib_install()
     main()
-
 
 def apply_pixel_distortion(frame, strength, scale_factor):
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
